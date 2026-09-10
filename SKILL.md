@@ -73,7 +73,20 @@ python scripts/subtitle_qc.py boost --input output/audio.mp3 --output output/aud
 腳本會印出增益前後的平均音量。**平均音量低於 -30 dB 就是典型的課堂錄影**，學生發言基本上辨識不出來，一定要做。實測 -39.4 dB → -18.9 dB 後，討論段的辨識率有肉眼可見的改善。
 
 #### 2-2 建立詞彙表並轉譯
-依課本內容寫一份**純名詞**詞彙表（格式見 `scripts/vocab.example.txt`），特別要放入**課文中的數字**（最容易被聽錯）。
+詞彙表要有**兩層**（格式見 `scripts/vocab.example.txt`）：
+- **教材層**：課本的專有名詞、生字語詞、**課文中的數字**（最容易被聽錯）
+- **課堂語言層**：教師的口頭指令與課堂慣用語（「誰可以告訴我」「翻開書本」「圈出來」「整句唸出來」「討論三分鐘」「關鍵字」「對不對」…）
+
+課堂錄影最常被聽錯的其實不是教材詞，而是**課堂語言**。這些錯誤字面上都不通，只要放進課堂語境就一眼看得出來：
+
+| 字幕原文 | 課堂語境還原 |
+|---|---|
+| 專件字 | **關鍵字** |
+| 誰在高度啊 | **誰可以告訴我** |
+| 就減爪 | **就減短** |
+| 差不多久了 | **差不多九成了** |
+| 一錯可及 | **一蹴可幾** |
+| 木集 | **募集** |
 ```bash
 python scripts/subtitle_qc.py transcribe --input output/audio_boost.mp3 \
   --vocab output/vocab.txt --output output/subtitles_raw.srt --transcript output/transcript.txt
@@ -107,6 +120,10 @@ python scripts/subtitle_qc.py collate --input output/subtitles_clean.srt \
 python scripts/subtitle_qc.py verify --input output/audio_boost.mp3 \
   --start 21:00 --duration 30 --vocab output/vocab.txt
 ```
+**三源交叉比對法**：單一次轉譯不可靠，同一段用三個來源互相參照最有效——①原始未增益版（顆粒細、斷句多）②增益後帶詞彙表版（用詞準）③`verify` 重聽版（斷句不同、可打破前兩者的共同錯誤）。三者一致就採用；不一致時用課堂語境判斷。
+
+> ⚠️ **詞彙表也可能造成偏誤**：實測用大量教材詞當 prompt 重聽「請問，這裡幾歲？五歲」，Whisper 把「五歲」聽成了「蚊帳」——因為 prompt 裡「蚊帳」出現太多次。**確認關鍵語句時，額外跑一次不帶詞彙表的 `verify`** 當對照。
+
 > 🔴 **這一步救過一次重大錯誤**：某次分析寫著「學生回答『50歲』，是值得保留的錯誤答案與概念混淆」，整頁投影片與討論問題都建立在這個前提上。重聽後發現學生說的是「**五歲**」——完全正確的答案。Whisper 把「五歲」聽成「50歲」，而課本寫的正是「五歲的凱瑟琳」。**只要某個引用讓你想寫出「學生答錯了」，就一定要重聽。**
 
 #### 2-6（選用）合成最佳版本
